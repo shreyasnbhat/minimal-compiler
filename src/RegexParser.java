@@ -36,16 +36,39 @@ class RegexParser {
     }
 
     public static Pair<Integer, String[]> classifyLine(String y) throws Exception {
+
+
+        /**
+         * This section pertains to any function call / definition
+         * Case 1 would be a function definition
+         * Case 2 would be a function call
+          */
         if (y.contains("(")) {
             assert y.contains(")");
-            Pattern p = Pattern.compile("\\(\\s*[\\w]*\\s*[\\w]*\\s*(,\\s*[\\w]*\\s*[\\w]*\\s*)?\\)");
 
-            String z2 = y.split("\\([\\w]*\\s*[\\w]*(,\\s*[\\w]*\\s*[\\w]*)?\\)")[0];
+            // Strips the brackets from the function call definitions
+            String z2 = y.split("\\(\\s*[\\w]*\\s*[\\w]*\\s*(,\\s*[\\w]*\\s*[\\w]*\\s*)?\\)")[0];
 
+            // This stores the final list of tokens including function_name and parameters
             ArrayList<String> tokens = new ArrayList<>();
+
             String[] tokens1 = z2.split(" ");
 
             int left = 0;
+
+            /**
+             * Case 1
+             * function_name ( )
+             * Tokens : [function_name]  Function Call
+             * < 4 , function_name param1 param2 >
+             *
+             * Case 2
+             * return_type function_name ( type1 param1 , type2 param2 )
+             * Tokens : [return_type function_name , type1 param1 type2 param2]
+             * Second token might be null for no parameters
+             * < 1 , return_type function_name type1 param1 type2 param2 >
+             * Otherwise throw Exception
+             */
             if (tokens1.length == 1) {
                 //String[] ret = {tokens1[0], tokens};
                 left = 4;
@@ -58,55 +81,59 @@ class RegexParser {
                 throw new Exception("Syntax error with " + y);
             }
 
-
+            /**
+             * Regex pattern to retrieve contents inside the brackets from the function call / declaration
+             * Example : void foo ( int x , int y ) ---->  ( int x , int y )
+             * Example : g () ----> ()
+             */
+            Pattern p = Pattern.compile("\\(\\s*[\\w]*\\s*[\\w]*\\s*(,\\s*[\\w]*\\s*[\\w]*\\s*)?\\)");
             Matcher m = p.matcher(y);
 
             if (m.find()) {
                 String z = m.group();
                 tokens1 = z.split("\\(\\s*|\\s*\\)|\\s*,\\s*|\\s+");
                 if (tokens1.length > 1) {
-                    for (int i = 1; i < tokens1.length; i++) tokens.add(tokens1[i]);
+                    for (int i = 1; i < tokens1.length; i++) {
+                        tokens.add(tokens1[i]);
+                    }
                 }
             } else
                 throw new Exception("Syntax error with " + y);
             String[] ret = new String[tokens.size()];
             return new Pair<>(left, tokens.toArray(ret));
-        } else {
+        }
+        /**
+         *  This handle the cases of variable initialization and declaration
+         *  Case 1 :
+         *  variable_type variable_name
+         *  Tokens : [variable_type , variable_name ]  Variable Declaration
+         *  < 2 , variable_type variable_name >
+         *
+         * Case 2 :
+         *  variable_name = value
+         *  Tokens : [variable_name , value ]  Variable Initialization
+         *  < 3 , variable_name value >
+         *
+         *  These cases are executed if no () are found. A simple split across spaces occurs to get all tokens
+         */
+        else {
             String[] tokens = y.split("\\s+");
-            if (tokens.length == 3) {
-                for (int i = 0; i < 3; i++) tokens[i] = tokens[i].trim();
-                return new Pair<>(3, tokens);
-            } else if (tokens.length == 2) {
-                for (int i = 0; i < 2; i++) tokens[i] = tokens[i].trim();
-                return new Pair<>(2, tokens);
+            if (tokens.length >=2 && tokens.length <=3 ) {
+                if (tokens.length == 3 && !tokens[1].equals("=")){
+                    throw new Exception("Variable Assignment expected at " + y );
+                }
+                for (int i = 0; i < tokens.length; i++) {
+                    tokens[i] = tokens[i].trim();
+                }
+                return new Pair<>(tokens.length, tokens);
             } else {
                 throw new Exception("Syntax error with " + y);
             }
         }
     }
 
-    public static void test(String y) {
-        Pattern p = Pattern.compile("\\([\\w]*\\s*[\\w]*(,\\s*[\\w]*\\s*[\\w]*)?\\)");
-        Matcher m = p.matcher(y);
-        if (m.find()) {
-            String z = m.group();
-            String[] tokens = z.split("\\(\\s*|\\s*\\)|\\s*,\\s*|\\s+");
-            System.out.println(tokens.length);
-            for (String line : tokens) {
-                System.out.println(line);
-            }
-        }
-        //String[] x = y.split("\\([\\w]*\\s*[\\w]*(,\\s*[\\w]*\\s*[\\w]*)?\\)");
-        //for(String z: x) System.out.println(z);
-    }
-
     public static void main(String[] args) throws Exception {
-        List<String> lines = parseIntoLines("int g; void f() {    { int     y; }      int x;          int y;         x = 7;          y = 5;      g(x, y); } void g(int x, int y) {    { int z; }      int x; }");
-
-        System.out.println("Parse Lines");
-        for (String line : lines) {
-            System.out.println(line);
-        }
+        List<String> lines = parseIntoLines("void f(){int e;} int main(int f,int h){ int a; a = 6; { int b; int c; int d; int e;} int x;}");
 
         for (String line : lines) {
             if (line.equals("{") | line.equals("}")) continue;
