@@ -67,7 +67,7 @@ public class Parser {
             } else if (token.equals(";")) {
                 System.out.println(" " + identifier + " " + kind + " " + type + " " + value);
                 try {
-                    newScope.insert(identifier, getKindEnum(kind), getTypeEnum(type));
+                    //newScope.insert(identifier, getKindEnum(kind), getTypeEnum(type));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
