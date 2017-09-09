@@ -28,7 +28,6 @@ public class Compiler {
             } else if (line.equals("}")) {
                 currentScope = exit(currentScope);
                 flag = false;
-                //paramKindList.clear();
             } else {
                 Pair<Integer, String[]> lineFormat = RegexParser.classifyLine(line);
                 String[] codeLine = lineFormat.getRight();
@@ -36,6 +35,7 @@ public class Compiler {
                     case 1:
                         if (codeLine.length % 2 == 0) {
                             paramKindList.add(Utils.getKind(codeLine[0]));
+
                             switch (codeLine.length) {
                                 case 6:
                                     paramKindList.add(Utils.getKind(codeLine[4]));
@@ -45,7 +45,8 @@ public class Compiler {
                                 default:
                                     break;
                             }
-                            currentScope.insert(codeLine[1], paramKindList, Utils.getType("fun"));
+                            ArrayList<Kind> parameterList = new ArrayList<>(paramKindList);
+                            currentScope.insert(codeLine[1], parameterList, Utils.getType("fun"));
                             paramKindList.clear();
                             flag = true;
                             // For the parameters we need to go a level below to add the parameters
@@ -72,29 +73,27 @@ public class Compiler {
                         currentScope.lookup(codeLine[0]);
                         break;
                     case 4:
-                        //Type checking is don
+                        //Type checking is done
                         SymbolTable functionSymbolTable = currentScope.lookup(codeLine[0]);
                         HashMap<String, Pair<Type, ArrayList<Kind>>> functionScope = functionSymbolTable.getCurrentScope();
 
                         if (!functionScope.get(codeLine[0]).getLeft().equals(Utils.getType("fun"))) {
                             throw new Exception("No function " + codeLine[0] + " is defined!");
                         } else {
-                            System.out.println("Symbol Table for Function " + codeLine[0]);
-                            System.out.println(functionSymbolTable);
                             ArrayList<Kind> kindList = functionScope.get(codeLine[0]).getRight();
 
                             // Check if parameter 1 exists
                             try {
                                 SymbolTable param1SymbolTable = currentScope.lookup(codeLine[1]);
                                 HashMap<String, Pair<Type, ArrayList<Kind>>> param1Scope = param1SymbolTable.getCurrentScope();
-                                System.out.println("Symbol Table for param1 " + codeLine[1]);
-                                System.out.println(param1SymbolTable);
 
                                 Kind param1KindDefined = kindList.get(1);
                                 Kind param1KindPassed = param1Scope.get(codeLine[1]).getRight().get(0);
 
-                                System.out.println(param1KindDefined + " " + param1KindPassed);
-
+                                boolean paramCheck = checkCompatibility(param1KindDefined,param1KindPassed);
+                                if(!paramCheck){
+                                    throw new Exception("Passed parameter " + codeLine[1] + " in function " + codeLine[0] + " should be of type " + param1KindDefined );
+                                }
                             } catch (ArrayIndexOutOfBoundsException e) {
                                 System.out.print("");
                             }
@@ -103,14 +102,14 @@ public class Compiler {
                             try {
                                 SymbolTable param2SymbolTable = currentScope.lookup(codeLine[2]);
                                 HashMap<String, Pair<Type, ArrayList<Kind>>> param2Scope = param2SymbolTable.getCurrentScope();
-                                System.out.println("Symbol Table for param2 " + codeLine[2]);
-                                System.out.println(param2SymbolTable);
 
                                 Kind param2KindDefined = kindList.get(2);
                                 Kind param2KindPassed = param2Scope.get(codeLine[2]).getRight().get(0);
 
-                                System.out.println(param2KindDefined + " " + param2KindPassed);
-
+                                boolean paramCheck = checkCompatibility(param2KindDefined,param2KindPassed);
+                                if(!paramCheck){
+                                    throw new Exception("Passed parameter " + codeLine[2] + " in function " + codeLine[0] + " should be of type " + param2KindDefined );
+                                }
                             } catch (ArrayIndexOutOfBoundsException e) {
                                 System.out.print("");
                             }
@@ -131,6 +130,15 @@ public class Compiler {
             System.err.print(e.getMessage());
         }
         return kindList;
+    }
+
+    public static boolean checkCompatibility(Kind given,Kind passed) throws Exception{
+
+        if (given.equals(passed)){
+            return true;
+        } else{
+            return false;
+        }
     }
 
     public static SymbolTable enter(SymbolTable currentScope) {
